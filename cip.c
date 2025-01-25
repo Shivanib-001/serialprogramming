@@ -6,11 +6,12 @@
  #include <stdlib.h>
  #include <unistd.h>
  #include <strings.h>
+#include <string.h>
  /* baudrate settings are defined in <asm/termbits.h>, which is
  included by <termios.h> */
- #define BAUDRATE B38400
+ #define BAUDRATE B9600
  /* change this definition for the correct port */
- #define MODEMDEVICE "/dev/ttyS1"
+ #define MODEMDEVICE "/dev/ttyS0"
  #define _POSIX_SOURCE 1 /* POSIX compliant source */
  #define FALSE 0
  #define TRUE 1
@@ -19,13 +20,16 @@
  {
  int fd,c, res;
  struct termios oldtio,newtio;
- char buf[255];
+ char *buf;
+ char *token;
+int timk;
+float lat, lng, spd,head;
  /*
  Open modem device for reading and writing and not as controlling tty
  because we don't want to get killed if linenoise sends CTRL−C.
  */
  fd = open(MODEMDEVICE, O_RDWR | O_NOCTTY );
- if (fd <0) {perror(MODEMDEVICE); exit(1); }
+ if (fd <0) {perror(MODEMDEVICE); exit(-1); }
  tcgetattr(fd,&oldtio); /* save current serial port settings */
  bzero(&newtio, sizeof(newtio)); /* clear struct for new port settings */
  /*
@@ -85,6 +89,7 @@
  In this example, inputting a 'z' at the beginning of a line will
  exit the program.
  */
+
  while (STOP==FALSE) { /* loop until we have a terminating condition */
  /* read blocks program execution until a line terminating character is
  input, even if more than 255 chars are input. If the number
@@ -92,9 +97,63 @@
  subsequent reads will return the remaining chars. res will be set
  to the actual number of characters actually read */
  res = read(fd,buf,255);
+ token = strtok(buf,",");
  buf[res]=0; /* set end of string, so we can printf */
- printf(":%s:%d\n", buf, res);
- if (buf[0]=='z') STOP=TRUE;
+ int k=0;
+ int rmc=0;
+ int y=0;
+ int gll=0;
+// printf(":%s:%d\n", buf, res);
+ do{
+ printf("token: %s %d %d \n",token,y,k);
+  if(strcmp(token,"$GNRMC")==0){
+   printf("GNRMC --- Found");
+    rmc+=1;
+    }
+
+if(strcmp(token,"V") == 0 && rmc==1){
+   printf("GNRMC --invalid");
+}else if(strcmp(token,"V")!=0 && rmc==1){
+///printf("rmc: --valid");
+y+=1;
+}
+
+if(k==y-1){
+//printf("--%s %d \n",token,y);
+if(k==1){
+//printf("Time : %d %d \n",atoi(token),y);
+timk=atoi(token);
+}
+if(k==3){
+//printf("lat: %f %d \n",atof(token),y);
+lat=atof(token);
+}
+if(k==5){
+//printf("lng: %f %d \n",atof(token),y);
+lng=atof(token);
+}
+if(k==7){
+//printf("speed: %f %d \n",atof(token),y);
+spd=atof(token);
+}
+if(k==8){
+head=atof(token);
+}
+printf("%d %f %f %f %f\n",timk,lat,lng,spd,head);
+}
+
+if(strcmp(token,"$GNGLL")==0){
+printf("gngll -- found");
+}
+
+ k+=1;
+//token = strtok(NULL," ");
+
+}
+while(token = strtok(NULL,","));
+
+// if (buf[0]=='z') STOP=TRUE;
+// usleep(1000);
  }
  /* restore the old port settings */
  tcsetattr(fd,TCSANOW,&oldtio);

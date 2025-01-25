@@ -6,8 +6,8 @@
   #include <unistd.h>
  #include <strings.h>
   #include <stdlib.h>
- #define BAUDRATE B38400
- #define MODEMDEVICE "/dev/ttyS1"
+ #define BAUDRATE B9600
+ #define MODEMDEVICE "/dev/ttyS0"
  #define _POSIX_SOURCE 1 /* POSIX compliant source */
  #define FALSE 0
  #define TRUE 1
@@ -18,7 +18,7 @@
  struct termios oldtio,newtio;
  char buf[255];
  fd = open(MODEMDEVICE, O_RDWR | O_NOCTTY );
- if (fd <0) {perror(MODEMDEVICE); exit(1); }
+ if (fd <0) {perror(MODEMDEVICE); exit(-1); }
  tcgetattr(fd,&oldtio); /* save current port settings */
  bzero(&newtio, sizeof(newtio));
  newtio.c_cflag = BAUDRATE | CRTSCTS | CS8 | CLOCAL | CREAD;
